@@ -85,11 +85,6 @@ void LoadOBJFromFile(char *FilePath, int *Size, Vertex *verts)
         char SplitStringData[99][99];
        // printf("%d, Finished Split\n", sizeof(Data));
         memcpy(SplitStringData, SplitString(Data, ' ', '\n'), 99*99);
-        printf( "1: %s\n", SplitStringData[0]);
-        printf( "2: %s\n", SplitStringData[1]);
-
-        printf( "3: %s\n", SplitStringData[2]);
-        printf( "4: %s\n", SplitStringData[3]);
 
         Vertex point;
         if (SplitStringData[0][0] == 'v'){

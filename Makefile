@@ -1,4 +1,4 @@
-OBJS = src/main.c src/glad.c src/LoadShader.c  src/stb_image.c src/Model.c src/OBJLoader.c src/Font.c
+OBJS = src/main.c src/glad.c src/LoadShader.c  src/stb_image.c src/Model.c src/OBJLoader.c src/Font.c src/EventLoader.c
 
 OBJ_Name = main
 

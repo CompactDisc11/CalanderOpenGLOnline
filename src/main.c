@@ -6,7 +6,7 @@
 #include "time.h"
 #include "FontData.h"
 #include "Font.h"
-
+#include "EventLoader.h"
 
 vec4 TextPositions[95];
 void DrawModelIndicies(Model m){
@@ -156,6 +156,11 @@ void SetupShaders(int *shaderProgram, int *ModelProgram, int *ShaderBackground, 
 
 int main(){
 
+
+	char S1[] = "Hello World";
+	char S2[] = "1";
+	StringCopy(S1, S2);
+	printf("1: %s| 2: %s", S1, S2);
 
 	for (int i = 0; i<95; i++){
 		Character c = characters_Arial[i];

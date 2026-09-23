@@ -18,7 +18,7 @@ int LoadAndCompileShader(char *Filepath, int type)
     
     
     
-    printf("%s\n", Data);
+    // printf("%s\n", Data);
     printf("Size of Data: %d\n", FileLength);
     unsigned int shader;
     shader = glCreateShader(type);

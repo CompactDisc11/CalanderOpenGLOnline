@@ -1,10 +1,10 @@
 #pragma once
-#include "cglm.h"
+#include "cglm/cglm.h"
 #include "Model.h"
 #include "FontData.h"
 #include "LoadShader.h"
-#define SCREEN_WIDTH (640.0*2.0)
-#define SCREEN_HEIGHT (480.0*2.0)
+#define SCREEN_WIDTH 1920
+#define SCREEN_HEIGHT 1080
 typedef struct {
     
 

@@ -59,7 +59,7 @@ void RenderText(unsigned int shader, char text[], float x, float y, float Scale,
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-        x += w/Scale*(640.0*2.0);
+        x += w*(SCREEN_WIDTH*0.75);
         i++;
     }
 }

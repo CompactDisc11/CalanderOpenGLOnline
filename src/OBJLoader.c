@@ -97,18 +97,18 @@ void LoadOBJFromFile(char *FilePath, int *Size, Vertex *verts)
 
 
             if (SplitStringData[0][1]=='n'){
-                printf("Normal \n");
+                // printf("Normal \n");
                 memcpy(Normal[NormalIndex], Vector3Data, sizeof(vec3));
                 NormalIndex += 1;
             }
             else if(SplitStringData[0][1]=='t'){
-                printf("Texture: \n");
+                // printf("Texture: \n");
                 
                 memcpy(Texture[TextureIndex], (vec2){Vector3Data[0], Vector3Data[1]}, sizeof(vec2));
                 TextureIndex += 1;
             }
             else{
-                printf("Vertex: \n");
+                // printf("Vertex: \n");
 
                 memcpy(Position[PositionIndex], Vector3Data, sizeof(vec3));
                 PositionIndex += 1;
@@ -119,7 +119,7 @@ void LoadOBJFromFile(char *FilePath, int *Size, Vertex *verts)
         }      
         
         else if (Data[0]== 'f'){
-            printf("Face: ");
+            // printf("Face: ");
             char V1[99][99];
             char V2[99][99];
             char V3[99][99];
@@ -182,6 +182,6 @@ void LoadOBJFromFile(char *FilePath, int *Size, Vertex *verts)
 
     glm_vec3_print(vertex[0].Position, stdout);
     *Size = VertexIndex;
-    printf("Vertex Index: %d\n", VertexIndex);
+    // printf("Vertex Index: %d\n", VertexIndex);
     memcpy(verts, vertex, sizeof(Vertex)*1024);
 }

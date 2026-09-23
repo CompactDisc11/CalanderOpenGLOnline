@@ -1,14 +1,18 @@
 #include "stb_image.h"
 #include "LoadShader.h"
-#include "cglm.h"
+#include "cglm/cglm.h"
 #include "Model.h"
 #include "OBJLoader.h"
 #include "time.h"
 #include "FontData.h"
 #include "Font.h"
 #include "EventLoader.h"
+#include "Scraper.h"
+#include "json.h"
+#include "libwebsockets.h"
 
 vec4 TextPositions[95];
+char *months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 void DrawModelIndicies(Model m){
 
 	glBindVertexArray(m.VAO);
@@ -100,6 +104,11 @@ void HandleInput(){
 					exit(0);
 				}
 			}
+			if (event.type == SDL_QUIT)
+			{
+					SDL_Quit();
+					exit(0);
+			}
 		}
 }
 
@@ -112,6 +121,45 @@ int *ConvertStringToIntegers(char *text){
 		Data[i] = (int)text[i];
 	}
 	return Data;
+}
+
+int getTempratureRTE()
+{
+	CurlResponse weatherInformation = getHTML("https://www.rte.ie/weather/forecast/29825/");
+	// printf("%s\n", weatherInformation.html);
+
+	time_t todayForJson = time(NULL);
+	struct tm *timedateForJson = localtime(&todayForJson);
+	timedateForJson->tm_hour += 1;
+	timedateForJson->tm_min = 0;
+	timedateForJson->tm_sec = 0;
+	if (timedateForJson->tm_hour > 23)
+	{
+		timedateForJson->tm_hour = 0;
+		timedateForJson->tm_mday += 1;
+	}
+	char buffer[999];
+	strftime(buffer, 999, "%Y-%m-%dT%H:%M:%S", timedateForJson);
+	char buffer2[999];
+	strftime(buffer2, 999, "%Y-%m-%d", timedateForJson);
+	printf("Date: %s\n", buffer);
+	json_object *root;
+	root = json_tokener_parse(weatherInformation.html);
+	json_object *datesObject = json_object_object_get(root, "dates");
+	json_object *datesObjectJson = json_object_object_get(datesObject, buffer2);
+	json_object *dateTimeObject = json_object_object_get(datesObjectJson, "datetime");
+	printf("DateTime: %s\n", json_object_get_string(dateTimeObject));
+
+	json_object *hoursObject = json_object_object_get(datesObjectJson, "hours");	
+	json_object *weatherObject = json_object_object_get(hoursObject, buffer);	
+	json_object *tempreatureObject = json_object_object_get(weatherObject, "temperature");
+
+
+
+
+
+	int tempratureDegrees = json_object_get_int(tempreatureObject);
+	return tempratureDegrees;
 }
 
 void DrawCalanderIcons(vec3 Positions[31], Model m, float tBegining, struct tm *t, int UniformMat, int UniformMatModel, int UniformIndex, mat4 PerspectiveMatrix){
@@ -153,152 +201,214 @@ void SetupShaders(int *shaderProgram, int *ModelProgram, int *ShaderBackground, 
 }
 
 
-
 int main(){
 
 
-	char S1[] = "Hello World";
-	char S2[] = "1";
-	StringCopy(S1, S2);
-	printf("1: %s| 2: %s", S1, S2);
+	char *S1 = "Hello World";
+	char *S2 = "1";
 
-	for (int i = 0; i<95; i++){
-		Character c = characters_Arial[i];
-		memcpy(TextPositions[i], (vec4){c.x, c.y, c.width, c.height}, sizeof(vec4));
-	}
-
-	float vertices[] = {
-		0.5f,  0.5f, -0.f,  1.0, 1.0,// top right //TexCoords
-		0.5f, -0.5f, -0.f,  1.0, 0.0,// bottom right
-		-0.5f, -0.5f, -0.f,  0.0, 0.0,// bottom left
-		-0.5f,  0.5f, -0.f,  0.0, 1.0// top left 
-	};
-	float VertBackground[] = {
-		1.0,  1.0, 0,  1.0, 1.0,// top right //TexCoords
-		1.0, -1.0, 0,  1.0, 0.0,// bottom right
-		-1.0, -1.0, 0,  0.0, 0.0,// bottom left
-		-1.0,  1.0, 0,  0.0, 1.0// top left 
-	};
-	unsigned int indices[] = {  // note that we start from 0!
-		0, 1, 3,   // first triangle
-		1, 2, 3    // second triangle
-	}; 
-	SDL_Window *mainWindow;
-	SDL_GLContext mainContext;
-	if (SDL_Init(SDL_INIT_VIDEO)<0){
-		printf("Error initilizing SDL\n");	
-		printf("%s\n", SDL_GetError());
-	}
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-	mainWindow = SDL_CreateWindow("Calander", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
-	mainContext = SDL_GL_CreateContext(mainWindow);
 	
-	//Needs to be called after the opengl context is created
-	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)){
-			printf("Failed to initialize opengl\n");
-			return -1;
-		}
+	StringCopy(&S1, &S2);
+	printf("1: %s \n2: %s\n", S1, S2);
+	// CurlResponse page = getHTML("https://www.rte.ie/news/headlines/");
+	// htmlDocPtr doc = ParseHTML(page.html, page.size);
+	char stringHeadlines[25][999];
+	char stringHeadlinesMostPopular[8][999];
+	// int headlines = getHeadlines(doc, stringHeadlines);
 	
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
 
-	//Number Texture
-	unsigned int texture = LoadTexture("Page/PageUV.png", GL_NEAREST_MIPMAP_NEAREST);
-	unsigned int textureFontSDF = LoadTexture("font.png", GL_LINEAR_MIPMAP_LINEAR);
-	//Number Texture
-	unsigned int TextureForFrameBuffer = GenerateTextureForFramebuffer(2100, 2100);
-	unsigned int TextFBO = CreateFramebuffer(TextureForFrameBuffer);
 	
-	int defaultshader;
-	int shaderProgram, ModelProgram, ShaderBackground, NumberShader;
-	SetupShaders(&shaderProgram, &ModelProgram, &ShaderBackground, &NumberShader, &defaultshader);
-
-	Model Test;
-	Model PanelRight;
-	Model Background;
-	Model NumberModel;
-	vec3 TilePositions[31];
-	LoadModelFromFile("Page/Page.obj", &Test, ModelProgram, (vec3){0, 0, 0}, (vec3){0.25, 0.25, 0.25});
-	LoadModelFromFile("Panel/Panel.obj", &PanelRight, shaderProgram, (vec3){4.25, -0.5, 5}, (vec3){0.5, 0.5, 0.5});
+	int tempratureDegrees = getTempratureRTE();
+	printf("Temprature: %d\n", tempratureDegrees);
 
 
-	unsigned int Textvbo, Textvao;
-	SetupText(&Textvao, &Textvbo);
 	
+	CurlResponse pageMostRead = getHTML("https://www.rte.ie/modules/most-popular/news/");
+	 htmlDocPtr docMostRead = ParseHTML(pageMostRead.html, pageMostRead.size);
+	 int headlinesMostRead = getMostRead(docMostRead, stringHeadlinesMostPopular);
+	 int maxLength = 0;
+	 for (int i = 0; i < 8; i++)
+	 {
+	 	maxLength += strlen(stringHeadlinesMostPopular[i])*35;
+	 }
+	   for (int i = 0; i<95; i++){
+	   	Character c = characters_Arial[i];
+	   	memcpy(TextPositions[i], (vec4){c.x, c.y, c.width, c.height}, sizeof(vec4));
+	   }
+
+	   float vertices[] = {
+	   	0.5f,  0.5f, -0.f,  1.0, 1.0, //top right TexCoords
+	   	0.5f, -0.5f, -0.f,  1.0, 0.0, //bottom right
+	   	-0.5f, -0.5f, -0.f,  0.0, 0.0, //bottom left
+	   	-0.5f,  0.5f, -0.f,  0.0, 1.0 //top left 
+	   };
+	   float VertBackground[] = {
+	   	1.0,  1.0, 0,  1.0, 1.0, //top right TexCoords
+	   	1.0, -1.0, 0,  1.0, 0.0, //bottom right
+	   	-1.0, -1.0, 0,  0.0, 0.0, //bottom left
+	   	-1.0,  1.0, 0,  0.0, 1.0 //top left 
+	   };
+	   unsigned int indices[] = {   //note that we start from 0!
+	   	0, 1, 3,    //first triangle
+	   	1, 2, 3     //second triangle
+	   }; 
+	   SDL_Window *mainWindow;
+	   SDL_GLContext mainContext;
+	   if (SDL_Init(SDL_INIT_VIDEO)<0){
+	   	printf("Error initilizing SDL\n");	
+	   	printf("%s\n", SDL_GetError());
+	   }
+	   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+	   mainWindow = SDL_CreateWindow("Calander", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
+	   mainContext = SDL_GL_CreateContext(mainWindow);
+	   SDL_SetWindowFullscreen(mainWindow, SDL_WINDOW_FULLSCREEN);
+	 // // //Needs to be called after the opengl context is created
+	   if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)){
+	   		printf("Failed to initialize opengl\n");
+	   		return -1;
+	   	}
 	
+	   glEnable(GL_DEPTH_TEST);
+	   glEnable(GL_CULL_FACE);
+	   glCullFace(GL_BACK);
+
+	 // //  Number Texture
+	   unsigned int texture = LoadTexture("Page/PageUV.png", GL_NEAREST_MIPMAP_NEAREST);
+	   unsigned int textureFontSDF = LoadTexture("font.png", GL_LINEAR_MIPMAP_LINEAR);
+	// // //  Number Texture
+	   unsigned int TextureForFrameBuffer = GenerateTextureForFramebuffer(2100, 2100);
+	   unsigned int TextFBO = CreateFramebuffer(TextureForFrameBuffer);
 	
-	Test.Texture1 = texture;
-		
-	CreateModel(VertBackground, indices, ShaderBackground, (vec3){0, 0, 0}, (vec3){1, 1, 1}, &Background);
-	CreateModel(VertBackground, indices, NumberShader, (vec3){0, 0, 0}, (vec3){1, 1, 1}, &NumberModel);
-	for (int i = 0; i<31; i++){
-		float xPos = i %7;
-		float yPos = i / 7;
-		memcpy(TilePositions[i], (vec3){(xPos*1.2)-4.5, (-yPos*1.2)+1.5, 5}, sizeof(vec3));
-	
-	}
-	float t = 0.0;
-	mat4 PerspectiveMatrix;
-	glm_perspective(glm_rad(45.0), SCREEN_WIDTH/SCREEN_HEIGHT, 0.01, 100.0, PerspectiveMatrix);
-	DrawTextOntoUV(NumberModel, textureFontSDF, TextFBO);
-	glUseProgram(Test.ShaderData.ProgramID);
-	glUniform1i(glGetUniformLocation(Test.ShaderData.ProgramID, "tex"), 0);
-	glUniform1i(glGetUniformLocation(Test.ShaderData.ProgramID, "BaseTex"), 1);
-	
-	
-	int UniformMat = glGetUniformLocation(Test.ShaderData.ProgramID, "transform");
-	int UniformMatModel = glGetUniformLocation(Test.ShaderData.ProgramID, "Model");
-	int UniformIndex = glGetUniformLocation(Test.ShaderData.ProgramID, "Index");
+	   int defaultshader;
+	   int shaderProgram, ModelProgram, ShaderBackground, NumberShader;
+	   SetupShaders(&shaderProgram, &ModelProgram, &ShaderBackground, &NumberShader, &defaultshader);
+
+	   Model Test;
+	   Model PanelRight;
+	   Model Background;
+	   Model NumberModel;
+	   vec3 TilePositions[31];
+	   LoadModelFromFile("Page/Page.obj", &Test, ModelProgram, (vec3){0, 0, 0}, (vec3){0.25, 0.25, 0.25});
+	   LoadModelFromFile("Panel/Panel.obj", &PanelRight, shaderProgram, (vec3){0, 0, -1}, (vec3){1.0, 1.0, 1.0});
 
 
-	while (1){
-		t += 1.0/60.0;
-		//Draw Calander			
+	   unsigned int Textvbo, Textvao;
+	   SetupText(&Textvao, &Textvbo);
+	
+	
+	
+	   Test.Texture1 = texture;
 		
-		HandleInput();
-		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		DrawBackground(Background, t);
-		glEnable(GL_DEPTH_TEST);
-		
-		
-		
-		
-		glUseProgram(Test.ShaderData.ProgramID);
-		glBindVertexArray(Test.VAO);
-		
-		
-		int UniformT = glGetUniformLocation(Test.ShaderData.ProgramID, "time");
-		
-		glUniform1f(UniformT, t);
-		float tBegining = t;
-		
-		time_t today = time(NULL);
-		struct tm *timedate = localtime(&today);
-		
-		
-		glUseProgram(Test.ShaderData.ProgramID);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, TextureForFrameBuffer);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, Test.Texture1);
-		
-		
-		DrawCalanderIcons(TilePositions, Test, tBegining, timedate, UniformMat, UniformMatModel, UniformIndex, PerspectiveMatrix);
-		glUseProgram(0);
-		RenderText(defaultshader, "Events:", 2000, -400.0, 1.5, Textvbo, Textvao, textureFontSDF);
+	  CreateModel(VertBackground, indices, ShaderBackground, (vec3){0, 0, 0}, (vec3){1, 1, 1}, &Background);
+	  CreateModel(VertBackground, indices, NumberShader, (vec3){0, 0, 0}, (vec3){1, 1, 1}, &NumberModel);
+	  for (int i = 0; i<31; i++){
+	  	float xPos = i %7;
+	  	float yPos = i / 7;
+	  	memcpy(TilePositions[i], (vec3){(xPos*1.2)-6.5, (-yPos*1.2)+1.5, 5}, sizeof(vec3));
+	
+	  }
+	  float t = 0.0;
+	  mat4 PerspectiveMatrix;
+	  glm_perspective(glm_rad(45.0), (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 0.01, 100.0, PerspectiveMatrix);
+	  mat4 orthoMat;
+	  glm_ortho(0, SCREEN_WIDTH, 0, SCREEN_HEIGHT, 0.01, 100, orthoMat);
+	  DrawTextOntoUV(NumberModel, textureFontSDF, TextFBO);
+	  glUseProgram(Test.ShaderData.ProgramID);
+	  glUniform1i(glGetUniformLocation(Test.ShaderData.ProgramID, "tex"), 0);
+	  glUniform1i(glGetUniformLocation(Test.ShaderData.ProgramID, "BaseTex"), 1);
+	
+	
+	   int UniformMat = glGetUniformLocation(Test.ShaderData.ProgramID, "transform");
+	   int UniformMatModel = glGetUniformLocation(Test.ShaderData.ProgramID, "Model");
+	   int UniformIndex = glGetUniformLocation(Test.ShaderData.ProgramID, "Index");
 
-		for (int i = 0; i<24; i++){
-			char EventLine[] = "%d: ";
-			sprintf(EventLine, "%d: ", i+1);
+	   int UniformMatPanel = glGetUniformLocation(PanelRight.ShaderData.ProgramID, "Model");
+	   int UniformMatTransformPanel = glGetUniformLocation(PanelRight.ShaderData.ProgramID, "transform");
+	  float startX = 100;
+	   while (1){
+	   	t += 1.0/60.0;
+	 //  	// Draw Calander			
+		
+	   	HandleInput();
+	   	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	   	DrawBackground(Background, t);
+	   	glEnable(GL_DEPTH_TEST);
+		
+		
+		
+		
+	   	glUseProgram(Test.ShaderData.ProgramID);
+	   	glBindVertexArray(Test.VAO);
+		
+		
+	   	int UniformT = glGetUniformLocation(Test.ShaderData.ProgramID, "time");
+		
+	   	glUniform1f(UniformT, t);
+	   	float tBegining = t;
+		
+	   	time_t today = time(NULL);
+	   	struct tm *timedate = localtime(&today);
+		
+		
+	   	glUseProgram(Test.ShaderData.ProgramID);
+	   	glActiveTexture(GL_TEXTURE0);
+	   	glBindTexture(GL_TEXTURE_2D, TextureForFrameBuffer);
+	   	glActiveTexture(GL_TEXTURE1);
+	   	glBindTexture(GL_TEXTURE_2D, Test.Texture1);
+		
+		
+	   	DrawCalanderIcons(TilePositions, Test, tBegining, timedate, UniformMat, UniformMatModel, UniformIndex, PerspectiveMatrix);
+	   	glUseProgram(0);
+	  	glUseProgram(PanelRight.ShaderData.ProgramID);
+	  	mat4 ModelMat;
+	  	glm_mat4_identity(ModelMat);
+	//  		// Modify only the model with transformations 
+	  	glm_translate(ModelMat, (vec3){-3, 5, -15});
+	//  		//  glm_rotate_y(ModelMat, glm_rad(cos(t)*90.0), ModelMat);
+	  	glm_scale(ModelMat, (vec3){3.0, 0.7, 1.0});
+	  	glm_rotate_x(ModelMat, glm_rad(90.0), ModelMat);
 			
-			RenderText(defaultshader, EventLine, 2000, -400.0-(40*(i+1))*1.5, 1.5, Textvbo, Textvao, textureFontSDF);
-		}
-		SDL_GL_SwapWindow(mainWindow);
-	}
+	  	glUniformMatrix4fv(UniformMatPanel, 1, GL_FALSE, (float*)ModelMat);
+	  	glm_mul(PerspectiveMatrix, ModelMat, ModelMat);
+	  	glUniformMatrix4fv(UniformMatTransformPanel, 1, GL_FALSE, (float*)ModelMat);
+
+	   	DrawModel(PanelRight);
+	  	char message[999];
+	  	sprintf(message, "%s %d", months[timedate->tm_mon], 1900+timedate->tm_year);
+		char messageTemprature[99];
+	  	sprintf(messageTemprature, "%d degrees", tempratureDegrees);
+
+	  	RenderText(defaultshader, message, 100, -200.0, 3.5, Textvbo, Textvao, textureFontSDF);
+	  	RenderText(defaultshader, messageTemprature, 2200, -200.0, 3.5, Textvbo, Textvao, textureFontSDF);
+		
+
+		
+		
+	 	if (startX < 100-maxLength)
+	 	{
+	 		startX = SCREEN_WIDTH*2.0;
+	 	}
+	 	startX -= 1.0/60.0*300;
+	 	int drawPosition = startX;
+	 	for (int i = 0; i< 8; i++)
+	 	{
+	 		RenderText(defaultshader, stringHeadlinesMostPopular[i], drawPosition, -430, 1.8, Textvbo, Textvao, textureFontSDF);
+	 		drawPosition += strlen(stringHeadlinesMostPopular[i])*35;
+	 	}
+	  	RenderText(defaultshader, "Todays events", 2200, -600.0, 3.5, Textvbo, Textvao, textureFontSDF);
+		
+
+	//   	//  for (int i = 0; i<24; i++){	
+	   	//  	char EventLine[] = "%d: ";
+	//   	//  	sprintf(EventLine, "%d: ", i+1);
+			
+	//   	//  	RenderText(defaultshader, EventLine, 2000, -400.0-(40*(i+1))*1.5, 1.5, Textvbo, Textvao, textureFontSDF);
+	   	//  }
+	   	SDL_GL_SwapWindow(mainWindow);
+	   }
 	return 0;
 }
 

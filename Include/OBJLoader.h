@@ -1,5 +1,5 @@
 #pragma once
-#include "cglm.h"
+#include "cglm/cglm.h"
 typedef struct
 {
     vec3 Position;

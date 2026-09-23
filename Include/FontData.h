@@ -1,5 +1,5 @@
 #pragma once
-#include "cglm.h"
+#include "cglm/cglm.h"
 typedef struct Character {
   int codePoint, x, y, width, height, originX, originY;
 } Character;
